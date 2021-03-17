@@ -1,0 +1,19 @@
+[package]
+name = "fixed-bump"
+version = "0.1.0"
+authors = ["taylor.fish <contact@taylor.fish>"]
+edition = "2018"
+description = """\
+    A bump allocator that uses fixed-size chunks to ensure non-amortized O(1)
+    allocations
+    """
+documentation = "https://docs.rs/fixed-bump"
+readme = "misc/crate-readme.md"
+repository = "https://github.com/taylordotfish/fixed-bump"
+license = "GPL-3.0-or-later"
+keywords = ["allocator", "arena", "bump", "constant-time", "fixed-size"]
+categories = ["memory-management", "no-std"]
+
+[features]
+allocator_api = []
+unstable = ["allocator_api"]
