@@ -94,4 +94,14 @@ fn allocator() {
         assert_eq!(vec1[i as usize], i);
         assert_eq!(vec2[i as usize], i.into());
     }
+
+    core::mem::drop(vec1);
+    core::mem::drop(vec2);
+    let mut vec3: Vec<u32, _> = Vec::with_capacity_in(32, bump);
+    for i in 0..32 {
+        vec3.push(i);
+    }
+    for i in 0..32 {
+        assert_eq!(vec3[i as usize], i);
+    }
 }

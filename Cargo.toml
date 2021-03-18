@@ -1,6 +1,6 @@
 [package]
 name = "fixed-bump"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["taylor.fish <contact@taylor.fish>"]
 edition = "2018"
 description = """\
@@ -17,3 +17,6 @@ categories = ["memory-management", "no-std"]
 [features]
 allocator_api = []
 unstable = ["allocator_api"]
+
+[package.metadata.docs.rs]
+features = ["allocator_api"]

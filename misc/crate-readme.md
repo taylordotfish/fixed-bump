@@ -70,9 +70,9 @@ where references are returned, note that destructors will not be
 automatically run. If this is an issue, you can do one of the following:
 
 * Drop those values manually with [`ptr::drop_in_place`].
-* Enable the `"allocator_api"` feature, which lets you use [`&Bump`] and
-  [`RcBump`] as allocators for various data structures like [`Box`] and
-  [`Vec`]. Note that this requires Rust nightly.
+* Enable the `"allocator_api"` feature, which lets you use [`Bump`],
+  `&Bump`, and [`RcBump`] as allocators for various data structures like
+  [`Box`] and [`Vec`]. Note that this requires Rust nightly.
 
 Note that, as with other bump allocators, the memory used by an allocated
 object will not be reclaimed or reused until the entire bump allocator
@@ -81,17 +81,17 @@ is dropped.
 Crate features
 --------------
 
-If the crate feature `"allocator_api"` is enabled, [`&Bump`] and [`RcBump`]
-will implement the unstable [`Allocator`] trait. This lets you use those
-types as allocators for various data structures like [`Box`] and [`Vec`].
-Note that this feature requires Rust nightly.
+If the crate feature `"allocator_api"` is enabled, [`Bump`], `&Bump` (due
+to the impl of [`Allocator`] for all `&A` where `A: Allocator`), and
+[`RcBump`] will implement the unstable [`Allocator`] trait. This lets you
+use those types as allocators for various data structures like [`Box`] and
+[`Vec`]. Note that this feature requires Rust nightly.
 
 [`Bump`]: https://docs.rs/fixed-bump/latest/fixed_bump/struct.Bump.html
 [`Bump::allocate`]: https://docs.rs/fixed-bump/latest/fixed_bump/struct.Bump.html#method.allocate
 [`Bump::alloc_value`]: https://docs.rs/fixed-bump/latest/fixed_bump/struct.Bump.html#method.alloc_value
 [`Bump::try_alloc_value`]: https://docs.rs/fixed-bump/latest/fixed_bump/struct.Bump.html#method.try_alloc_value
 [`ptr::drop_in_place`]: https://doc.rust-lang.org/core/ptr/fn.drop_in_place.html
-[`&Bump`]: https://docs.rs/fixed-bump/latest/fixed_bump/struct.Bump.html
 [`RcBump`]: https://docs.rs/fixed-bump/latest/fixed_bump/struct.RcBump.html
 [`Box`]: https://doc.rust-lang.org/stable/alloc/boxed/struct.Box.html
 [`Vec`]: https://doc.rust-lang.org/stable/alloc/vec/struct.Vec.html

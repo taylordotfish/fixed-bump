@@ -105,9 +105,9 @@
 //! automatically run. If this is an issue, you can do one of the following:
 //!
 //! * Drop those values manually with [`ptr::drop_in_place`].
-//! * Enable the `"allocator_api"` feature, which lets you use [`&Bump`] and
-//!   [`RcBump`] as allocators for various data structures like [`Box`] and
-//!   [`Vec`]. Note that this requires Rust nightly.
+//! * Enable the `"allocator_api"` feature, which lets you use [`Bump`],
+//!   `&Bump`, and [`RcBump`] as allocators for various data structures like
+//!   [`Box`] and [`Vec`]. Note that this requires Rust nightly.
 //!
 //! Note that, as with other bump allocators, the memory used by an allocated
 //! object will not be reclaimed or reused until the entire bump allocator
@@ -116,13 +116,13 @@
 //! Crate features
 //! --------------
 //!
-//! If the crate feature `"allocator_api"` is enabled, [`&Bump`] and [`RcBump`]
-//! will implement the unstable [`Allocator`] trait. This lets you use those
-//! types as allocators for various data structures like [`Box`] and [`Vec`].
-//! Note that this feature requires Rust nightly.
+//! If the crate feature `"allocator_api"` is enabled, [`Bump`], `&Bump` (due
+//! to the impl of [`Allocator`] for all `&A` where `A: Allocator`), and
+//! [`RcBump`] will implement the unstable [`Allocator`] trait. This lets you
+//! use those types as allocators for various data structures like [`Box`] and
+//! [`Vec`]. Note that this feature requires Rust nightly.
 //!
 //! [`ptr::drop_in_place`]: core::ptr::drop_in_place
-//! [`&Bump`]: Bump
 //! [`Box`]: alloc::boxed::Box
 //! [`Vec`]: alloc::vec::Vec
 //! [`Allocator`]: alloc::alloc::Allocator

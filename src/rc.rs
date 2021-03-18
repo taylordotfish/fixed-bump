@@ -62,7 +62,7 @@ impl<Size, Align> Deref for RcBump<Size, Align> {
     }
 }
 
-// SAFETY: This impl simply forwards to `&Bump`'s `Allocator` impl. See that
+// SAFETY: This impl simply forwards to `Bump`'s `Allocator` impl. See that
 // impl for more safety documentation.
 //
 // `RcBump` is a wrapper around `Rc<Bump>`, so clones of `RcBump` will behave
@@ -71,13 +71,13 @@ impl<Size, Align> Deref for RcBump<Size, Align> {
 #[cfg(feature = "allocator_api")]
 unsafe impl<Size, Align> Allocator for RcBump<Size, Align> {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
-        Allocator::allocate(&&*self.0, layout)
+        Allocator::allocate(&*self.0, layout)
     }
 
     unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
         // SAFETY: We simply forward to `&Bump`'s `Allocator` impl, which has
         // the same safety requirements as this method. The caller of this
         // method is responsible for ensuring those requirements are met.
-        unsafe { Allocator::deallocate(&&*self.0, ptr, layout) }
+        unsafe { Allocator::deallocate(&*self.0, ptr, layout) }
     }
 }

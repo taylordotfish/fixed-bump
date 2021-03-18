@@ -142,11 +142,11 @@ impl<Size, Align> Default for Bump<Size, Align> {
 // SAFETY: `Bump::allocate` (when not returning `None`) returns pointers to
 // valid memory that matches the provided `Layout`.
 //
-// `&Bump` is a normal reference type, so clones of `&Bump` will behave like
-// the same allocator, and moving a `&Bump` will not invalidate any returned
-// memory.
+// `Bump` cannot be cloned, as it does not implement `Clone`. Moving it will
+// not invalidate any returned memory, as all returned memory is allocated on
+// the heap via the global allocator.
 #[cfg(feature = "allocator_api")]
-unsafe impl<Size, Align> Allocator for &Bump<Size, Align> {
+unsafe impl<Size, Align> Allocator for Bump<Size, Align> {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         (*self).allocate(layout).ok_or(AllocError)
     }
@@ -155,3 +155,13 @@ unsafe impl<Size, Align> Allocator for &Bump<Size, Align> {
         // No-op: `Bump` deallocates all its memory when dropped.
     }
 }
+
+#[cfg(doctest)]
+/// [`Bump`] cannot implement [`Clone`], as this would make it unsound to
+/// implement [`Allocator`](core::alloc::alloc::Allocator).
+///
+/// ```compile_fail
+/// use fixed_bump::Bump;
+/// struct Test<T: Clone = Bump<u8>>(T);
+/// ```
+mod bump_does_not_impl_clone {}
