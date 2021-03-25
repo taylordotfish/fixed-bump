@@ -105,3 +105,12 @@ fn allocator() {
         assert_eq!(vec3[i as usize], i);
     }
 }
+
+#[test]
+#[should_panic]
+fn zero_chunk_size() {
+    let bump = Bump::<[u8; 0]>::new();
+    for i in 0..4 {
+        let _ = bump.alloc_value(i);
+    }
+}
