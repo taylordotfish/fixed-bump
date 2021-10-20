@@ -35,7 +35,7 @@ use core::ptr::NonNull;
 #[repr(transparent)]
 pub struct ChunkMemory<Size, Align>(
     NonNull<u8>,
-    PhantomData<*const (Size, Align)>,
+    PhantomData<fn() -> (Size, Align)>,
 );
 
 impl<Size, Align> ChunkMemory<Size, Align> {
@@ -135,3 +135,8 @@ impl<Size, Align> Drop for ChunkMemory<Size, Align> {
         }
     }
 }
+
+// SAFETY: `ChunkMemory` represents an owned region of memory (in particular,
+// no two instances of `ChunkMemory` will point to the same region of memory),
+// so it can be sent to another thread.
+unsafe impl<Size, Align> Send for ChunkMemory<Size, Align> {}
