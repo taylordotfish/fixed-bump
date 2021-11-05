@@ -78,6 +78,6 @@ unsafe impl<Size, Align> Allocator for RcBump<Size, Align> {
         // SAFETY: We simply forward to `&Bump`'s `Allocator` impl, which has
         // the same safety requirements as this method. The caller of this
         // method is responsible for ensuring those requirements are met.
-        unsafe { Allocator::deallocate(&*self.0, ptr, layout) }
+        unsafe { Allocator::deallocate(&*self.0, ptr, layout) };
     }
 }

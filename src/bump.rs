@@ -148,7 +148,7 @@ impl<Size, Align> Default for Bump<Size, Align> {
 #[cfg(feature = "allocator_api")]
 unsafe impl<Size, Align> Allocator for Bump<Size, Align> {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
-        (*self).allocate(layout).ok_or(AllocError)
+        self.allocate(layout).ok_or(AllocError)
     }
 
     unsafe fn deallocate(&self, _ptr: NonNull<u8>, _layout: Layout) {
