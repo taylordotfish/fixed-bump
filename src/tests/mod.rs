@@ -17,46 +17,102 @@
  * along with fixed-bump. If not, see <https://www.gnu.org/licenses/>.
  */
 
-mod bump;
+use crate::Bump;
+
 mod rc;
 
-/// The example from the crate documentation. It's duplicated here because Miri
-/// currently doesn't run doctests.
 #[test]
-fn crate_example() {
-    use crate::Bump;
-    struct Item(u64);
+fn empty() {
+    Bump::<[u8; 16]>::new();
+}
 
-    // Use chunks large and aligned enough to hold 128 `Item`s.
-    let bump = Bump::<[Item; 128]>::new();
-    let item1: &mut Item = bump.alloc_value(Item(1));
-    let item2: &mut Item = bump.alloc_value(Item(2));
-    item1.0 += item2.0;
+#[test]
+fn basic() {
+    let bump = Bump::<[u8; 16]>::new();
+    let item1 = bump.alloc_value(1_u8);
+    let item2 = bump.alloc_value(2_u8);
+    let item3 = bump.alloc_value(3_u8);
+    assert_eq!(*item1, 1_u8);
+    assert_eq!(*item2, 2_u8);
+    assert_eq!(*item3, 3_u8);
+}
 
-    assert_eq!(item1.0, 3);
-    assert_eq!(item2.0, 2);
+#[test]
+fn multiple_chunks() {
+    let bump = Bump::<[u8; 2]>::new();
+    let item1 = bump.alloc_value(1_u8);
+    let item2 = bump.alloc_value(2_u8);
+    let item3 = bump.alloc_value(3_u8);
+    let item4 = bump.alloc_value(4_u8);
+    let item5 = bump.alloc_value(5_u8);
+    assert_eq!(*item1, 1_u8);
+    assert_eq!(*item2, 2_u8);
+    assert_eq!(*item3, 3_u8);
+    assert_eq!(*item4, 4_u8);
+    assert_eq!(*item5, 5_u8);
+}
 
-    // Can also allocate different types:
-    let array: &mut [u8; 8] = bump.alloc_value([0, 1, 2, 3, 4, 5, 6, 7]);
-    assert_eq!(array.iter().sum::<u8>(), 28);
+#[test]
+fn multiple_types() {
+    let bump = Bump::<[u64; 2]>::new();
+    let item1 = bump.alloc_value(1_u8);
+    let item2 = bump.alloc_value(2_u32);
+    let item3 = bump.alloc_value(3_u64);
+    let item4 = bump.alloc_value(4_u64);
+    let item5 = bump.alloc_value(5_u16);
+    let item6 = bump.alloc_value(6_u8);
+    let item7 = bump.alloc_value(7_u32);
+    let item8 = bump.alloc_value(8_u32);
+    let item9 = bump.alloc_value(9_u8);
+    let item10 = bump.alloc_value(10_u64);
+    let item11 = bump.alloc_value(11_u64);
+    assert_eq!(*item1, 1);
+    assert_eq!(*item2, 2);
+    assert_eq!(*item3, 3);
+    assert_eq!(*item4, 4);
+    assert_eq!(*item5, 5);
+    assert_eq!(*item6, 6);
+    assert_eq!(*item7, 7);
+    assert_eq!(*item8, 8);
+    assert_eq!(*item9, 9);
+    assert_eq!(*item10, 10);
+    assert_eq!(*item11, 11);
+}
 
-    // Can also use `&Bump` as an `Allocator` (requires "allocator_api"):
-    #[cfg(feature = "allocator_api")]
-    {
-        use alloc::vec::Vec;
-        // To avoid resizing, we create these `Vec`s with the maximum capacity
-        // we want them ever to have. Resizing would waste memory, since bump
-        // allocators don't reclaim or reuse memory until the entire allocator
-        // is dropped.
-        let mut vec1: Vec<u32, _> = Vec::with_capacity_in(8, &bump);
-        let mut vec2: Vec<u32, _> = Vec::with_capacity_in(4, &bump);
-        for i in 0..4 {
-            vec1.push(i * 2);
-            vec1.push(i * 2 + 1);
-            vec2.push(i * 2);
-        }
+#[cfg(feature = "allocator_api")]
+#[test]
+fn allocator() {
+    use alloc::vec::Vec;
+    let bump = Bump::<[u32; 32]>::new();
+    let mut vec1: Vec<u16, _> = Vec::with_capacity_in(32, &bump);
+    for i in 0..32 {
+        vec1.push(i);
+    }
+    let mut vec2: Vec<u32, _> = Vec::with_capacity_in(32, &bump);
+    for i in 0..32 {
+        vec2.push(i);
+    }
+    for i in 0_u16..32 {
+        assert_eq!(vec1[i as usize], i);
+        assert_eq!(vec2[i as usize], i.into());
+    }
 
-        assert_eq!(vec1, [0, 1, 2, 3, 4, 5, 6, 7]);
-        assert_eq!(vec2, [0, 2, 4, 6]);
+    core::mem::drop(vec1);
+    core::mem::drop(vec2);
+    let mut vec3: Vec<u32, _> = Vec::with_capacity_in(32, bump);
+    for i in 0..32 {
+        vec3.push(i);
+    }
+    for i in 0..32 {
+        assert_eq!(vec3[i as usize], i);
+    }
+}
+
+#[test]
+#[should_panic]
+fn zero_chunk_size() {
+    let bump = Bump::<[u8; 0]>::new();
+    for i in 0..4 {
+        let _ = bump.alloc_value(i);
     }
 }

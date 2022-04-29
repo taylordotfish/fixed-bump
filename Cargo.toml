@@ -1,6 +1,6 @@
 [package]
 name = "fixed-bump"
-version = "0.1.4-dev"
+version = "0.1.4"
 authors = ["taylor.fish <contact@taylor.fish>"]
 edition = "2018"
 description = """A bump allocator that uses fixed-size chunks to ensure \
