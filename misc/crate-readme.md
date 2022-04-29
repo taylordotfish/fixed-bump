@@ -85,7 +85,12 @@ If the crate feature `allocator_api` is enabled, [`Bump`], `&Bump` (due to
 the impl of [`Allocator`] for all `&A` where `A: Allocator`), and
 [`RcBump`] will implement the unstable [`Allocator`] trait. This lets you
 use those types as allocators for various data structures like [`Box`] and
-[`Vec`]. Note that this feature requires Rust nightly.
+[`Vec`]. Note that this feature requires Rust nightly. Alternatively, if
+the feature `allocator-fallback` is enabled, this crate will use the
+allocator API provided by [allocator-fallback] instead of the standard
+library's.
+
+[allocator-fallback]: https://docs.rs/allocator-fallback
 
 [`Bump`]: https://docs.rs/fixed-bump/latest/fixed_bump/struct.Bump.html
 [`Bump::allocate`]: https://docs.rs/fixed-bump/latest/fixed_bump/struct.Bump.html#method.allocate

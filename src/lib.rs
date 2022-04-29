@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 taylor.fish <contact@taylor.fish>
+ * Copyright (C) 2021-2022 taylor.fish <contact@taylor.fish>
  *
  * This file is part of fixed-bump.
  *
@@ -19,8 +19,7 @@
 
 #![no_std]
 #![cfg_attr(feature = "allocator_api", feature(allocator_api))]
-#![cfg_attr(feature = "unstable", deny(unsafe_op_in_unsafe_fn))]
-#![cfg_attr(not(feature = "unstable"), allow(unused_unsafe))]
+#![deny(unsafe_op_in_unsafe_fn)]
 #![warn(clippy::pedantic)]
 #![allow(clippy::default_trait_access)]
 #![allow(clippy::module_name_repetitions)]
@@ -116,12 +115,24 @@
 //! the impl of [`Allocator`] for all `&A` where `A: Allocator`), and
 //! [`RcBump`] will implement the unstable [`Allocator`] trait. This lets you
 //! use those types as allocators for various data structures like [`Box`] and
-//! [`Vec`]. Note that this feature requires Rust nightly.
+//! [`Vec`]. Note that this feature requires Rust nightly. Alternatively, if
+//! the feature `allocator-fallback` is enabled, this crate will use the
+//! allocator API provided by [allocator-fallback] instead of the standard
+//! library's.
+//!
+//! [allocator-fallback]: https://docs.rs/allocator-fallback
 //!
 //! [`ptr::drop_in_place`]: core::ptr::drop_in_place
 //! [`Box`]: alloc::boxed::Box
 //! [`Vec`]: alloc::vec::Vec
 //! [`Allocator`]: alloc::alloc::Allocator
+
+#[cfg(feature = "allocator_api")]
+use alloc::alloc::{AllocError, Allocator};
+
+#[cfg(not(feature = "allocator_api"))]
+#[cfg(feature = "allocator-fallback")]
+use allocator_fallback::{AllocError, Allocator};
 
 extern crate alloc;
 

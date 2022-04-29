@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 taylor.fish <contact@taylor.fish>
+ * Copyright (C) 2021-2022 taylor.fish <contact@taylor.fish>
  *
  * This file is part of fixed-bump.
  *
@@ -20,9 +20,10 @@
 use super::Bump;
 use alloc::rc::Rc;
 use core::ops::Deref;
-#[cfg(feature = "allocator_api")]
+#[cfg(any(feature = "allocator_api", feature = "allocator-fallback"))]
 use {
-    alloc::alloc::{AllocError, Allocator, Layout},
+    super::{AllocError, Allocator},
+    alloc::alloc::Layout,
     core::ptr::NonNull,
 };
 
@@ -62,13 +63,13 @@ impl<Size, Align> Deref for RcBump<Size, Align> {
     }
 }
 
+#[cfg(any(feature = "allocator_api", feature = "allocator-fallback"))]
 // SAFETY: This impl simply forwards to `Bump`'s `Allocator` impl. See that
 // impl for more safety documentation.
 //
 // `RcBump` is a wrapper around `Rc<Bump>`, so clones of `RcBump` will behave
 // like the same allocator, and moving an `RcBump` will not invalidate any
 // returned memory.
-#[cfg(feature = "allocator_api")]
 unsafe impl<Size, Align> Allocator for RcBump<Size, Align> {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         Allocator::allocate(&*self.0, layout)

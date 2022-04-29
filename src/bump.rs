@@ -18,9 +18,9 @@
  */
 
 use super::inner::BumpInner;
+#[cfg(any(feature = "allocator_api", feature = "allocator-fallback"))]
+use super::{AllocError, Allocator};
 use alloc::alloc::Layout;
-#[cfg(feature = "allocator_api")]
-use alloc::alloc::{AllocError, Allocator};
 use core::cell::UnsafeCell;
 use core::ptr::NonNull;
 
@@ -139,13 +139,13 @@ impl<Size, Align> Default for Bump<Size, Align> {
     }
 }
 
+#[cfg(any(feature = "allocator_api", feature = "allocator-fallback"))]
 // SAFETY: `Bump::allocate` (when not returning `None`) returns pointers to
 // valid memory that matches the provided `Layout`.
 //
 // `Bump` cannot be cloned, as it does not implement `Clone`. Moving it will
 // not invalidate any returned memory, as all returned memory is allocated on
 // the heap via the global allocator.
-#[cfg(feature = "allocator_api")]
 unsafe impl<Size, Align> Allocator for Bump<Size, Align> {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         self.allocate(layout).ok_or(AllocError)
