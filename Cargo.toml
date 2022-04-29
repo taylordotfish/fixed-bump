@@ -3,10 +3,8 @@ name = "fixed-bump"
 version = "0.1.4-dev"
 authors = ["taylor.fish <contact@taylor.fish>"]
 edition = "2018"
-description = """\
-    A bump allocator that uses fixed-size chunks to ensure non-amortized O(1)
-    allocations
-    """
+description = """A bump allocator that uses fixed-size chunks to ensure \
+    non-amortized O(1) allocations"""
 documentation = "https://docs.rs/fixed-bump"
 readme = "misc/crate-readme.md"
 repository = "https://github.com/taylordotfish/fixed-bump"
