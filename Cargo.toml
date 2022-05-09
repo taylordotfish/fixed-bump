@@ -1,6 +1,6 @@
 [package]
 name = "fixed-bump"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["taylor.fish <contact@taylor.fish>"]
 edition = "2021"
 rust-version = "1.60"
@@ -18,6 +18,7 @@ allocator_api = ["allocator-fallback?/allocator_api"]
 
 [dependencies.allocator-fallback]
 version = "0.1.1"
+default-features = false
 optional = true
 
 [package.metadata.docs.rs]
