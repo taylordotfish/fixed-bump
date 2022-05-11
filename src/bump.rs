@@ -101,7 +101,6 @@ impl<Size, Align> Bump<Size, Align> {
         self.try_alloc_value(value).ok().expect("allocation failed")
     }
 
-    #[allow(clippy::doc_markdown)]
     /// Tries to allocate a value of type `T`.
     ///
     /// If the allocation succeeds, the memory is initialized with `value` and
@@ -140,6 +139,13 @@ impl<Size, Align> Default for Bump<Size, Align> {
 }
 
 #[cfg(any(feature = "allocator_api", feature = "allocator-fallback"))]
+#[cfg_attr(
+    feature = "doc_cfg",
+    doc(cfg(any(
+        feature = "allocator_api",
+        feature = "allocator-fallback"
+    )))
+)]
 // SAFETY: `Bump::allocate` (when not returning `None`) returns pointers to
 // valid memory that matches the provided `Layout`.
 //

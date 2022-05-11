@@ -27,7 +27,6 @@ use {
     core::ptr::NonNull,
 };
 
-#[allow(clippy::doc_markdown)]
 /// A wrapper around <code>[Rc]<[Bump]<T>></code>.
 ///
 /// This type exists mainly so that [`Allocator`](alloc::alloc::Allocator)
@@ -35,7 +34,6 @@ use {
 pub struct RcBump<Size, Align = Size>(pub Rc<Bump<Size, Align>>);
 
 impl<Size, Align> RcBump<Size, Align> {
-    #[allow(clippy::doc_markdown)]
     /// Creates a new [`RcBump`]. This simply returns
     /// <code>[RcBump]\([Rc::new]\([Bump::new]\())</code>.
     pub fn new() -> Self {
@@ -64,6 +62,13 @@ impl<Size, Align> Deref for RcBump<Size, Align> {
 }
 
 #[cfg(any(feature = "allocator_api", feature = "allocator-fallback"))]
+#[cfg_attr(
+    feature = "doc_cfg",
+    doc(cfg(any(
+        feature = "allocator_api",
+        feature = "allocator-fallback"
+    )))
+)]
 // SAFETY: This impl simply forwards to `Bump`'s `Allocator` impl. See that
 // impl for more safety documentation.
 //

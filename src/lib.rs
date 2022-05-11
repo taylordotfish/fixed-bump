@@ -19,9 +19,11 @@
 
 #![no_std]
 #![cfg_attr(feature = "allocator_api", feature(allocator_api))]
+#![cfg_attr(feature = "doc_cfg", feature(doc_cfg))]
 #![deny(unsafe_op_in_unsafe_fn)]
 #![warn(clippy::pedantic)]
 #![allow(clippy::default_trait_access)]
+#![allow(clippy::doc_markdown)]
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::must_use_candidate)]
 
