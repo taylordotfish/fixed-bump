@@ -1,7 +1,6 @@
 [package]
 name = "fixed-bump"
-version = "0.2.2"
-authors = ["taylor.fish <contact@taylor.fish>"]
+version = "0.2.3-dev"
 edition = "2021"
 rust-version = "1.60"
 description = """A bump allocator that uses fixed-size chunks to ensure \

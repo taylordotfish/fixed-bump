@@ -30,6 +30,41 @@ pub struct BumpInner<Size, Align> {
     offset: usize,
 }
 
+/// Returns a pointer matching `layout` if `layout.align()` is less than or
+/// equal to `Chunk::<Size, Align>::align()`. Otherwise, the returned pointer
+/// will *not* necessarily be aligned to `layout.align()`.
+///
+/// # Safety
+///
+/// * `offset` must be less than or equal to `Chunk::<Size, Align>::size()`.
+/// * `offset` must be greater than or equal to `layout.size()`.
+unsafe fn allocate_in_chunk<Size, Align>(
+    layout: Layout,
+    chunk: &mut Chunk<Size, Align>,
+    offset: &mut usize,
+) -> NonNull<[u8]> {
+    // Round down to a multiple of `layout.align()`. Note that this subtraction
+    // will not underflow due to this function's safety requirements.
+    let new_offset = (*offset - layout.size()) & !(layout.align() - 1);
+    let storage: NonNull<u8> = chunk.storage();
+
+    // SAFETY: `new_offset` must be less than or equal to `offset`, and the
+    // caller guarantees that `offset` is less than or equal to
+    // `Chunk::<Size, Align>::size()`.
+    let start = unsafe { storage.as_ptr().add(new_offset) };
+    let len = *offset - new_offset;
+    *offset = new_offset;
+
+    // Note: Although not required by `slice_from_raw_parts_mut`, the
+    // returned slice points to valid (but possibly uninitialized) memory:
+    // there must be at least `len` bytes after `start` within the same
+    // allocated object due to the subtraction of `layout.size()` we
+    // performed earlier.
+    let ptr = ptr::slice_from_raw_parts_mut(start, len);
+    // SAFETY: `storage` is non-null, so `ptr` must also be non-null.
+    unsafe { NonNull::new_unchecked(ptr) }
+}
+
 impl<Size, Align> BumpInner<Size, Align> {
     pub fn new() -> Self {
         Self {
@@ -53,70 +88,29 @@ impl<Size, Align> BumpInner<Size, Align> {
             return None;
         }
 
-        let (chunk, offset) = match (
-            self.chunk.as_mut(),
-            self.offset.checked_sub(layout.size()),
-        ) {
-            (Some(chunk), Some(offset)) => (chunk, offset),
-            _ => return self.allocate_in_new_chunk(layout),
-        };
+        if let Some(chunk) = self.chunk.as_mut() {
+            if self.offset >= layout.size() {
+                // SAFETY: `self.offset` is always less than or equal to
+                // `Self::chunk_size()` due to this type's invariants, and we
+                // just ensured that `self.offset` is at least `layout.size()`.
+                return Some(unsafe {
+                    allocate_in_chunk(layout, chunk, &mut self.offset)
+                });
+            }
+        }
 
-        // Round down to a multiple of `layout.align()`.
-        let offset = offset & !(layout.align() - 1);
-        let storage: NonNull<u8> = chunk.storage();
+        if layout.size() > Self::chunk_size() {
+            return None;
+        }
 
-        // SAFETY: `offset` must be less than or equal to `self.offset`
-        // (specifically, at least `layout.size()` less, due to the checked
-        // subtraction we performed), and `self.offset` is always less than or
-        // equal to `Self::chunk_size()`, which is less than or equal to the
-        // size of the memory pointed to by `storage`.
-        let start = unsafe { storage.as_ptr().add(offset) };
-        let len = self.offset - offset;
-        self.offset = offset;
-
-        // Note: Although not required by `slice_from_raw_parts_mut`, the
-        // returned slice points to valid (but possibly uninitialized) memory:
-        // there must be at least `len` bytes after `start` within the same
-        // allocated object due to the subtraction of `layout.size()` we
-        // performed earlier.
-        let ptr = ptr::slice_from_raw_parts_mut(start, len);
-        // SAFETY: `storage` is non-null, so `ptr` must also be non-null.
-        Some(unsafe { NonNull::new_unchecked(ptr) })
-    }
-
-    /// If `layout.align()` is less than or equal to `Self::chunk_align()`,
-    /// returns a pointer matching `layout`, or `None` if the allocation fails.
-    ///
-    /// If `layout.align()` is greater than `Self::chunk_align()`, the
-    /// allocation may succeed, but the pointer will *not* be aligned to
-    /// `layout.align()`.
-    fn allocate_in_new_chunk(
-        &mut self,
-        layout: Layout,
-    ) -> Option<NonNull<[u8]>> {
-        let offset = Self::chunk_size().checked_sub(layout.size())?;
-        let mut chunk = Chunk::new(self.chunk.take())?;
-
-        // Round down to a multiple of `layout.align()`.
-        let offset = offset & !(layout.align() - 1);
-        let storage: NonNull<u8> = chunk.storage();
-
-        // SAFETY: `offset` must be less than or equal to `Self::chunk_size()`
-        // (specifically, at least `layout.size()` less, due to the checked
-        // subtraction we performed).
-        let start = unsafe { storage.as_ptr().add(offset) };
-        let len = Self::chunk_size() - offset;
-        self.offset = offset;
-        self.chunk = Some(chunk);
-
-        // Note: Although not required by `slice_from_raw_parts_mut`, the
-        // returned slice points to valid (but possibly uninitialized) memory:
-        // there must be at least `len` bytes after `start` within the same
-        // allocated object due to the subtraction of `layout.size()` we
-        // performed earlier.
-        let ptr = ptr::slice_from_raw_parts_mut(start, len);
-        // SAFETY: `storage` is non-null, so `ptr` must also be non-null.
-        Some(unsafe { NonNull::new_unchecked(ptr) })
+        let chunk = self.chunk.take();
+        let chunk = self.chunk.insert(Chunk::new(chunk)?);
+        self.offset = Self::chunk_size();
+        // SAFETY: `self.offset` is always less than or equal to
+        // `Self::chunk_size()` due to this type's invariants, and we ensured
+        // that `Self::chunk_size()` (the current value of `self.offset`) is
+        // at least `layout.size()` above.
+        Some(unsafe { allocate_in_chunk(layout, chunk, &mut self.offset) })
     }
 }
 
