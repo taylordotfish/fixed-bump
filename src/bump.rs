@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 taylor.fish <contact@taylor.fish>
+ * Copyright (C) 2021-2022 taylor.fish <contact@taylor.fish>
  *
  * This file is part of fixed-bump.
  *
@@ -17,11 +17,14 @@
  * along with fixed-bump. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use super::chunk::Chunk;
 use super::inner::BumpInner;
 #[cfg(any(feature = "allocator_api", feature = "allocator-fallback"))]
 use super::{AllocError, Allocator};
-use alloc::alloc::Layout;
+use alloc::alloc::{handle_alloc_error, Layout};
 use core::cell::UnsafeCell;
+#[cfg(doc)]
+use core::mem;
 use core::ptr::NonNull;
 
 /// A bump allocator that allocates memory in non-amortized O(1) (constant)
@@ -29,10 +32,10 @@ use core::ptr::NonNull;
 ///
 /// The allocator internally uses fixed-size chunks of memory. The size and
 /// alignment of each chunk of memory is determined by the type parameters
-/// `Size` and `Align`: the size is [`mem::size_of::<Size>()`][size_of] and the
-/// alignment is [`mem::align_of::<Align>()`][align_of]. The default value of
-/// `Align` is `Size`, so you can specify both the size and alignment with a
-/// single type parameter.
+/// `Size` and `Align`: the size is [`mem::size_of::<Size>()`] and the
+/// alignment is [`mem::align_of::<Align>()`]. The default value of `Align` is
+/// `Size`, so you can specify both the size and alignment with a single type
+/// parameter.
 ///
 /// A common use of this type, and the most space-efficient way to use it, is
 /// to allocate many values of the same type (or at least the same size and
@@ -40,9 +43,6 @@ use core::ptr::NonNull;
 /// using an array type: to use properly aligned chunks large enough to
 /// allocate `n` values of type `T`, pass `[T; n]` as the `Size` parameter,
 /// which will also be the `Align` parameter by default.
-///
-/// [size_of]: core::mem::size_of
-/// [align_of]: core::mem::align_of
 pub struct Bump<Size, Align = Size>(UnsafeCell<BumpInner<Size, Align>>);
 
 impl<Size, Align> Bump<Size, Align> {
@@ -62,19 +62,11 @@ impl<Size, Align> Bump<Size, Align> {
     ///
     /// Allocation is guaranteed to succeed, assuming the global allocator
     /// succeeds, if [`layout.size()`] is less than or equal to
-    /// [`mem::size_of::<Size>()`][size_of] and [`layout.align()`] is less than
-    /// or equal to [`mem::align_of::<Align>()`][align_of].
-    ///
-    /// Allocation may fail, but is not guaranteed to fail, if
-    /// [`layout.align()`] is greater than
-    /// [`mem::align_of::<Align>()`][align_of]. Allocation *is* guaranteed to
-    /// fail if [`layout.size()`] is greater than
-    /// [`mem::size_of::<Size>()`][size_of].
+    /// [`mem::size_of::<Size>()`] and [`layout.align()`] is less than or equal
+    /// to [`mem::align_of::<Align>()`]. See [`Self::can_allocate`].
     ///
     /// [`layout.size()`]: Layout::size
     /// [`layout.align()`]: Layout::align
-    /// [size_of]: core::mem::size_of
-    /// [align_of]: core::mem::align_of
     /// [`Allocator::allocate`]: alloc::alloc::Allocator::allocate
     pub fn allocate(&self, layout: Layout) -> Option<NonNull<[u8]>> {
         // SAFETY: `BumpInner::alloc` does not run any code that could possibly
@@ -91,14 +83,23 @@ impl<Size, Align> Bump<Size, Align> {
     ///
     /// # Panics
     ///
-    /// Panics if [`Self::allocate`] is not able to allocate memory matching
-    /// [`Layout::new::<T>()`](Layout::new). See [`Self::allocate`] for
-    /// details regarding the circumstances in which allocation can fail.
+    /// Panics if this allocator cannot allocate memory matching
+    /// [`Layout::new::<T>()`] (see [`Self::can_allocate`]). Note that if the
+    /// global allocator fails, [`handle_alloc_error`] is called instead of
+    /// panicking.
     ///
-    /// For a non-panicking equivalent, see [`Self::try_alloc_value`].
+    /// For an equivalent that doesn't panic or call [`handle_alloc_error`],
+    /// see [`Self::try_alloc_value`].
     #[allow(clippy::mut_from_ref)]
+    #[must_use]
     pub fn alloc_value<T>(&self, value: T) -> &mut T {
-        self.try_alloc_value(value).ok().expect("allocation failed")
+        if let Ok(r) = self.try_alloc_value(value) {
+            return r;
+        }
+        if Self::can_allocate(Layout::new::<T>()) {
+            handle_alloc_error(Chunk::<Size, Align>::LAYOUT);
+        }
+        panic!("this allocator cannot allocate values of this type");
     }
 
     /// Tries to allocate a value of type `T`.
@@ -130,6 +131,20 @@ impl<Size, Align> Bump<Size, Align> {
         // SAFETY: We just initialized `memory` with `value`.
         Ok(unsafe { &mut *memory.as_ptr() })
     }
+
+    /// Returns whether this allocator can allocate memory matching `layout`.
+    ///
+    /// This is guaranteed to return true if [`layout.size()`] is less than or
+    /// equal to [`mem::size_of::<Size>()`] and [`layout.align()`] is less than
+    /// or equal to [`mem::align_of::<Align>()`]. It *may* return true if the
+    /// alignment is bigger, but never if the size is.
+    ///
+    /// [`layout.size()`]: Layout::size
+    /// [`layout.align()`]: Layout::align
+    pub fn can_allocate(layout: Layout) -> bool {
+        layout.size() <= Chunk::<Size, Align>::SIZE
+            && layout.align() <= Chunk::<Size, Align>::ALIGN
+    }
 }
 
 impl<Size, Align> Default for Bump<Size, Align> {
@@ -143,7 +158,7 @@ impl<Size, Align> Default for Bump<Size, Align> {
     feature = "doc_cfg",
     doc(cfg(any(
         feature = "allocator_api",
-        feature = "allocator-fallback"
+        feature = "allocator-fallback",
     )))
 )]
 // SAFETY: `Bump::allocate` (when not returning `None`) returns pointers to

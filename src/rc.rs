@@ -27,7 +27,7 @@ use {
     core::ptr::NonNull,
 };
 
-/// A wrapper around <code>[Rc]<[Bump]<T>></code>.
+/// A wrapper around <code>[Rc]<[Bump]\<T>></code>.
 ///
 /// This type exists mainly so that [`Allocator`](alloc::alloc::Allocator)
 /// can be implemented for it.
@@ -57,7 +57,7 @@ impl<Size, Align> Deref for RcBump<Size, Align> {
     type Target = Bump<Size, Align>;
 
     fn deref(&self) -> &Self::Target {
-        &*self.0
+        &self.0
     }
 }
 
@@ -66,7 +66,7 @@ impl<Size, Align> Deref for RcBump<Size, Align> {
     feature = "doc_cfg",
     doc(cfg(any(
         feature = "allocator_api",
-        feature = "allocator-fallback"
+        feature = "allocator-fallback",
     )))
 )]
 // SAFETY: This impl simply forwards to `Bump`'s `Allocator` impl. See that
