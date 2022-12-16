@@ -27,6 +27,7 @@ Example
 -------
 
 ```rust
+# #![cfg_attr(feature = "allocator_api", feature(allocator_api))]
 use fixed_bump::Bump;
 struct Item(u64);
 
@@ -70,9 +71,9 @@ where references are returned, note that destructors will not be
 automatically run. If this is an issue, you can do one of the following:
 
 * Drop those values manually with [`ptr::drop_in_place`].
-* Enable the `allocator_api` feature, which lets you use [`Bump`], `&Bump`,
-  and [`RcBump`] as allocators for various data structures like [`Box`] and
-  [`Vec`]. Note that this requires Rust nightly.
+* Enable the `allocator_api` feature, which lets you use bump allocators
+  with various data structures like [`Box`] and [`Vec`]. Note that this
+  requires Rust nightly.
 
 Note that, as with other bump allocators, the memory used by an allocated
 object will not be reclaimed or reused until the entire bump allocator
@@ -81,23 +82,23 @@ is dropped.
 Crate features
 --------------
 
-If the crate feature `allocator_api` is enabled, [`Bump`], `&Bump` (due to
-the impl of [`Allocator`] for all `&A` where `A: Allocator`), and
-[`RcBump`] will implement the unstable [`Allocator`] trait. This lets you
-use those types as allocators for various data structures like [`Box`] and
-[`Vec`]. Note that this feature requires Rust nightly. Alternatively, if
-the feature `allocator-fallback` is enabled, this crate will use the
-allocator API provided by [allocator-fallback] instead of the standard
-library's.
+If the crate feature `allocator_api` is enabled, the unstable [`Allocator`]
+trait will be implemented for `T`, `&T`, and [`crate::Rc<T>`], where `T` is
+[`Bump`] or [`DynamicBump`]. This lets you use those types as allocators
+for various data structures like [`Box`] and [`Vec`]. Note that this
+feature requires Rust nightly. Alternatively, if the feature
+`allocator-fallback` is enabled, this crate will use the allocator API
+provided by [allocator-fallback] instead of the standard library's.
 
 [allocator-fallback]: https://docs.rs/allocator-fallback
 
-[`Bump`]: https://docs.rs/fixed-bump/latest/fixed_bump/struct.Bump.html
-[`Bump::allocate`]: https://docs.rs/fixed-bump/latest/fixed_bump/struct.Bump.html#method.allocate
-[`Bump::alloc_value`]: https://docs.rs/fixed-bump/latest/fixed_bump/struct.Bump.html#method.alloc_value
-[`Bump::try_alloc_value`]: https://docs.rs/fixed-bump/latest/fixed_bump/struct.Bump.html#method.try_alloc_value
+[`Bump`]: https://docs.rs/fixed-bump/0.3/fixed_bump/struct.Bump.html
+[`Bump::allocate`]: https://docs.rs/fixed-bump/0.3/fixed_bump/struct.Bump.html#method.allocate
+[`Bump::alloc_value`]: https://docs.rs/fixed-bump/0.3/fixed_bump/struct.Bump.html#method.alloc_value
+[`Bump::try_alloc_value`]: https://docs.rs/fixed-bump/0.3/fixed_bump/struct.Bump.html#method.try_alloc_value
 [`ptr::drop_in_place`]: https://doc.rust-lang.org/core/ptr/fn.drop_in_place.html
-[`RcBump`]: https://docs.rs/fixed-bump/latest/fixed_bump/struct.RcBump.html
 [`Box`]: https://doc.rust-lang.org/stable/alloc/boxed/struct.Box.html
 [`Vec`]: https://doc.rust-lang.org/stable/alloc/vec/struct.Vec.html
 [`Allocator`]: https://doc.rust-lang.org/stable/alloc/alloc/trait.Allocator.html
+[`crate::Rc<T>`]: https://docs.rs/fixed-bump/0.3/fixed_bump/struct.Rc.html
+[`DynamicBump`]: https://docs.rs/fixed-bump/0.3/fixed_bump/struct.DynamicBump.html

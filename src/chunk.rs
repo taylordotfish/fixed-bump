@@ -18,33 +18,26 @@
  */
 
 use alloc::alloc::Layout;
-use alloc::boxed::Box;
-use core::mem::{self, MaybeUninit};
+use core::mem;
 use core::ptr::{addr_of_mut, NonNull};
 
-#[repr(C)]
-struct ChunkMemory<Size, Align> {
-    _align: [Align; 0],
-    item: MaybeUninit<Size>,
-    prev: Option<Chunk<Size, Align>>,
+struct ChunkHeader {
+    prev: Option<Chunk>,
 }
 
 // Invariant: `self.0` always points to a valid, initialized, properly aligned
-// `ChunkMemory`.
+// `ChunkHeader`.
 #[repr(transparent)]
-pub struct Chunk<Size, Align>(NonNull<ChunkMemory<Size, Align>>);
+pub struct Chunk(NonNull<ChunkHeader>);
 
-impl<Size, Align> Chunk<Size, Align> {
-    pub const SIZE: usize = mem::size_of::<Size>();
-    pub const ALIGN: usize = mem::align_of::<ChunkMemory<Size, Align>>();
-    pub const LAYOUT: Layout = Layout::new::<ChunkMemory<Size, Align>>();
+impl Chunk {
+    pub fn new(layout: Layout, prev: Option<Self>) -> Option<Self> {
+        let layout = Self::full_layout(layout);
+        assert!(layout.size() > 0);
 
-    pub fn new(prev: Option<Self>) -> Option<Self> {
-        assert!(Self::LAYOUT.size() > 0);
-
-        // SAFETY: We ensured `Self::LAYOUT` has non-zero size above.
-        let ptr: NonNull<ChunkMemory<Size, Align>> =
-            NonNull::new(unsafe { alloc::alloc::alloc(Self::LAYOUT) })?.cast();
+        // SAFETY: We ensured `layout` has non-zero size above.
+        let ptr: NonNull<ChunkHeader> =
+            NonNull::new(unsafe { alloc::alloc::alloc(layout) })?.cast();
 
         // SAFETY: `alloc::alloc::alloc` returns valid, properly aligned
         // memory.
@@ -54,23 +47,58 @@ impl<Size, Align> Chunk<Size, Align> {
         Some(Self(ptr))
     }
 
-    /// Returns a pointer to the start of the storage. It is guaranteed to be
-    /// at least [`Self::SIZE`] bytes in size. Note that the memory could be
-    /// uninitialized.
-    pub fn storage(&mut self) -> NonNull<u8> {
-        self.0.cast()
+    /// The layout of the memory returned by [`Self::storage`], assuming
+    /// `layout` was passed to [`Self::new`]. The size and alignment are
+    /// guaranteed to be greater than or equal to the size and alignment of
+    /// `layout`, respectively.
+    pub fn layout(layout: Layout) -> Layout {
+        let size = layout.size();
+        let align = layout.align().max(mem::align_of::<ChunkHeader>());
+        Layout::from_size_align(size, align).unwrap()
     }
 
-    pub fn into_prev(self) -> Option<Self> {
+    /// The layout of the entire block of memory allocated by [`Self::new`],
+    /// assuming `layout` was the layout provided to that function. This is
+    /// useful mainly when calling [`handle_alloc_error`].
+    ///
+    /// [`handle_alloc_error`]: alloc::alloc::handle_alloc_error
+    pub fn full_layout(layout: Layout) -> Layout {
+        let size =
+            layout.size().checked_add(mem::size_of::<ChunkHeader>()).unwrap();
+        let align = layout.align().max(mem::align_of::<ChunkHeader>());
+        Layout::from_size_align(size, align).unwrap()
+    }
+
+    /// Returns a pointer to the start of the storage. It is guaranteed to
+    /// match [`Self::layout(cl)`], where `cl` is the layout that was passed to
+    /// [`Self::new`]. Note that the memory could be uninitialized.
+    pub fn storage(&self) -> NonNull<u8> {
+        // SAFETY: `self.0` points to a valid `ChunkHeader`, so adding 1 must
+        // result in a pointer within or one byte past the end of the same
+        // allocated object.
+        let end = unsafe { self.0.as_ptr().add(1) };
+
+        // SAFETY: `self.0` is non-null and points to a valid object, so `end`
+        // must also be non-null.
+        unsafe { NonNull::new_unchecked(end) }.cast()
+    }
+
+    pub fn take_prev(&mut self) -> Option<Self> {
         // SAFETY: `self.0` is always initialized and properly aligned.
         unsafe { &mut (*self.0.as_ptr()).prev }.take()
     }
-}
 
-impl<Size, Align> Drop for Chunk<Size, Align> {
-    fn drop(&mut self) {
-        // SAFETY: `self.0` was allocated by `alloc::alloc::alloc` and can thus
-        // be turned into a `Box`.
-        drop(unsafe { Box::from_raw(self.0.as_ptr()) });
+    /// # Safety
+    ///
+    /// `layout` must be equal to the layout passed to [`Self::new`].
+    pub unsafe fn drop(self, layout: Layout) {
+        // SAFETY: `self.0` is always allocated by the global allocator. Caller
+        // ensures `layout` is correct.
+        unsafe {
+            alloc::alloc::dealloc(
+                self.0.as_ptr().cast(),
+                Self::full_layout(layout),
+            );
+        }
     }
 }

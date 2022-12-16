@@ -17,16 +17,16 @@
  * along with fixed-bump. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::RcBump;
+use crate::{Bump, Rc};
 
 #[test]
 fn empty() {
-    RcBump::<[u8; 16]>::new();
+    Rc::<Bump<[u8; 16]>>::default();
 }
 
 #[test]
 fn basic() {
-    let bump = RcBump::<[u8; 16]>::new();
+    let bump = Rc::<Bump<[u8; 16]>>::default();
     let item1 = bump.alloc_value(1_u8);
     let item2 = bump.alloc_value(2_u8);
     let item3 = bump.alloc_value(3_u8);
@@ -37,7 +37,7 @@ fn basic() {
 
 #[test]
 fn multiple_chunks() {
-    let bump = RcBump::<[u8; 2]>::new();
+    let bump = Rc::<Bump<[u8; 2]>>::default();
     let item1 = bump.alloc_value(1_u8);
     let item2 = bump.alloc_value(2_u8);
     let item3 = bump.alloc_value(3_u8);
@@ -54,7 +54,7 @@ fn multiple_chunks() {
 #[test]
 fn allocator() {
     use alloc::vec::Vec;
-    let bump = RcBump::<[u8; 16]>::new();
+    let bump = Rc::<Bump<[u8; 16]>>::default();
     let mut vec1: Vec<u8, _> = Vec::with_capacity_in(8, bump.clone());
     let mut vec2: Vec<u8, _> = Vec::with_capacity_in(8, bump);
     for i in 0..8 {

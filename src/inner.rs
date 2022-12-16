@@ -22,17 +22,23 @@ use alloc::alloc::Layout;
 use core::ptr;
 use core::ptr::NonNull;
 
-/// Returns a pointer matching `layout` if `layout.align()` is less than or
-/// equal to `Chunk::<Size, Align>::ALIGN`. Otherwise, the returned pointer
-/// will *not* necessarily be aligned to `layout.align()`.
+/// Returns a pointer matching `layout` if [`layout.align()`] is less than or
+/// equal to <code>[Chunk::layout(cl)].[align()]</code>, where `cl` is the
+/// layout that was passed to [`Chunk::new`]. Otherwise, the returned pointer
+/// will *not* necessarily be aligned to [`layout.align()`].
 ///
 /// # Safety
 ///
-/// * `offset` must be less than or equal to `Chunk::<Size, Align>::SIZE`.
-/// * `offset` must be greater than or equal to `layout.size()`.
-unsafe fn allocate_in_chunk<Size, Align>(
+/// * `offset` must be greater than or equal to [`layout.size()`].
+/// * `offset` must be less than or equal to [`Chunk::layout(cl)`], where `cl`
+///   is the layout that was passed to [`Chunk::new`].
+///
+/// [align()]: Layout::align
+/// [`layout.align()`]: Layout::align
+/// [`layout.size()`]: Layout::size
+unsafe fn allocate_in_chunk(
     layout: Layout,
-    chunk: &mut Chunk<Size, Align>,
+    chunk: &Chunk,
     offset: &mut usize,
 ) -> NonNull<[u8]> {
     // Round down to a multiple of `layout.align()`. Note that this subtraction
@@ -41,8 +47,8 @@ unsafe fn allocate_in_chunk<Size, Align>(
     let storage: NonNull<u8> = chunk.storage();
 
     // SAFETY: `new_offset` must be less than or equal to `offset`, and the
-    // caller guarantees that `offset` is less than or equal to
-    // `Chunk::<Size, Align>::SIZE`.
+    // caller guarantees that `offset` is less than or equal to the chunk
+    // layout's size.
     let start = unsafe { storage.as_ptr().add(new_offset) };
     let len = *offset - new_offset;
     *offset = new_offset;
@@ -57,34 +63,45 @@ unsafe fn allocate_in_chunk<Size, Align>(
     unsafe { NonNull::new_unchecked(ptr) }
 }
 
-// Invariant: `offset` is less than or equal to `Self::CHUNK_SIZE`.
-pub struct BumpInner<Size, Align> {
-    chunk: Option<Chunk<Size, Align>>,
+// Invariant: `offset` is less than or equal to `self.chunk_size()`.
+pub struct BumpInner<L: Copy + Into<Layout>> {
+    chunk: Option<Chunk>,
     offset: usize,
+    layout: L,
 }
 
-impl<Size, Align> BumpInner<Size, Align> {
-    const CHUNK_SIZE: usize = Chunk::<Size, Align>::SIZE;
-    const CHUNK_ALIGN: usize = Chunk::<Size, Align>::ALIGN;
-
-    pub fn new() -> Self {
+impl<L: Copy + Into<Layout>> BumpInner<L> {
+    pub fn new(layout: L) -> Self {
         Self {
             chunk: None,
             offset: 0,
+            layout,
         }
+    }
+
+    pub fn layout(&self) -> Layout {
+        self.layout.into()
+    }
+
+    fn chunk_size(&self) -> usize {
+        Chunk::layout(self.layout()).size()
+    }
+
+    fn chunk_align(&self) -> usize {
+        Chunk::layout(self.layout()).align()
     }
 
     /// Returns a pointer to memory matching `layout`, or `None` if the
     /// allocation fails.
     pub fn allocate(&mut self, layout: Layout) -> Option<NonNull<[u8]>> {
-        if layout.align() > Self::CHUNK_ALIGN {
+        if layout.align() > self.chunk_align() {
             return None;
         }
 
         if let Some(chunk) = self.chunk.as_mut() {
             if self.offset >= layout.size() {
                 // SAFETY: `self.offset` is always less than or equal to
-                // `Self::CHUNK_SIZE` due to this type's invariants, and we
+                // `self.chunk_size()` due to this type's invariants, and we
                 // just ensured that `self.offset` is at least `layout.size()`.
                 return Some(unsafe {
                     allocate_in_chunk(layout, chunk, &mut self.offset)
@@ -92,26 +109,33 @@ impl<Size, Align> BumpInner<Size, Align> {
             }
         }
 
-        if layout.size() > Self::CHUNK_SIZE {
+        if layout.size() > self.chunk_size() {
             return None;
         }
 
+        let chunk_size = self.chunk_size();
         let chunk = self.chunk.take();
-        let chunk = self.chunk.insert(Chunk::new(chunk)?);
-        self.offset = Self::CHUNK_SIZE;
+        let chunk = self.chunk.insert(Chunk::new(self.layout(), chunk)?);
+        self.offset = chunk_size;
+
         // SAFETY: `self.offset` is always less than or equal to
-        // `Self::CHUNK_SIZE` due to this type's invariants, and we ensured
-        // that `Self::CHUNK_SIZE` (the current value of `self.offset`) is at
+        // `self.chunk_size()` due to this type's invariants, and we ensured
+        // that `self.chunk_size()` (the current value of `self.offset`) is at
         // least `layout.size()` above.
         Some(unsafe { allocate_in_chunk(layout, chunk, &mut self.offset) })
     }
 }
 
-impl<Size, Align> Drop for BumpInner<Size, Align> {
+impl<L: Copy + Into<Layout>> Drop for BumpInner<L> {
     fn drop(&mut self) {
-        let mut prev = self.chunk.take();
-        while let Some(chunk) = prev {
-            prev = chunk.into_prev();
+        let mut tail = self.chunk.take();
+        while let Some(mut chunk) = tail {
+            let prev = chunk.take_prev();
+            // SAFETY: All chunks are allocated with `self.layout`.
+            unsafe {
+                chunk.drop(self.layout());
+            }
+            tail = prev;
         }
     }
 }
