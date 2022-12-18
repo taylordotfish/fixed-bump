@@ -18,7 +18,7 @@
  */
 
 #![no_std]
-#![cfg_attr(feature = "allocator_api", feature(allocator_api))]
+#![cfg_attr(has_allocator_api, feature(allocator_api))]
 #![cfg_attr(feature = "doc_cfg", feature(doc_cfg))]
 #![deny(unsafe_op_in_unsafe_fn)]
 #![warn(clippy::pedantic)]
