@@ -20,6 +20,7 @@
 fn main() {
     if cfg!(feature = "allocator_api") {
         println!("cargo:rustc-cfg=has_allocator_api");
+        #[allow(clippy::needless_return)]
         return;
     }
     #[cfg(feature = "allocator-fallback")]
