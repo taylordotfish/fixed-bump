@@ -17,14 +17,17 @@
  * along with fixed-bump. If not, see <https://www.gnu.org/licenses/>.
  */
 
-fn main() {
-    if cfg!(feature = "allocator_api") {
-        println!("cargo:rustc-cfg=has_allocator_api");
-        #[allow(clippy::needless_return)]
-        return;
-    }
+fn has_allocator_api() -> bool {
     #[cfg(feature = "allocator-fallback")]
     if allocator_fallback::HAS_ALLOCATOR_API {
+        return true;
+    }
+    cfg!(feature = "allocator_api")
+}
+
+fn main() {
+    if has_allocator_api() {
         println!("cargo:rustc-cfg=has_allocator_api");
     }
+    println!("cargo:rerun-if-changed=build.rs");
 }

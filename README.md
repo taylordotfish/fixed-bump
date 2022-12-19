@@ -88,7 +88,7 @@ trait will be implemented for `T`, `&T`, and [`crate::Rc<T>`], where `T` is
 for various data structures like [`Box`] and [`Vec`]. Note that this
 feature requires Rust nightly. Alternatively, if the feature
 `allocator-fallback` is enabled, this crate will use the allocator API
-provided by [allocator-fallback] instead of the standard library's.
+provided by [allocator-fallback] instead of the standard library’s.
 
 [allocator-fallback]: https://docs.rs/allocator-fallback
 
