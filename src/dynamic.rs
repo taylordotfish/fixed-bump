@@ -155,12 +155,17 @@ unsafe impl Allocator for DynamicBump {
     }
 }
 
-#[cfg(doctest)]
+#[cfg(any(doc, doctest))]
 /// [`DynamicBump`] cannot implement [`Clone`], as this would make it unsound
-/// to implement [`Allocator`](core::alloc::alloc::Allocator).
+/// to implement [`Allocator`](alloc::alloc::Allocator).
+///
+/// ```
+/// use fixed_bump::DynamicBump;
+/// struct Test<T = DynamicBump>(T);
+/// ```
 ///
 /// ```compile_fail
 /// use fixed_bump::DynamicBump;
-/// struct Test<T: Clone = DynamicBump<u8>>(T);
+/// struct Test<T: Clone = DynamicBump>(T);
 /// ```
 mod dynamic_bump_does_not_impl_clone {}

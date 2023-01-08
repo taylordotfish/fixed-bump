@@ -177,9 +177,14 @@ unsafe impl<Size, Align> Allocator for Bump<Size, Align> {
     }
 }
 
-#[cfg(doctest)]
+#[cfg(any(doc, doctest))]
 /// [`Bump`] cannot implement [`Clone`], as this would make it unsound to
-/// implement [`Allocator`](core::alloc::alloc::Allocator).
+/// implement [`Allocator`](alloc::alloc::Allocator).
+///
+/// ```
+/// use fixed_bump::Bump;
+/// struct Test<T = Bump<u8>>(T);
+/// ```
 ///
 /// ```compile_fail
 /// use fixed_bump::Bump;
