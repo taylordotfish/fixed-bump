@@ -28,3 +28,7 @@ optional = true
 
 [package.metadata.docs.rs]
 features = ["allocator_api", "doc_cfg"]
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = ["cfg(has_allocator_api)"]

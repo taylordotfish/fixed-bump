@@ -19,7 +19,7 @@
 
 use alloc::alloc::Layout;
 use core::mem;
-use core::ptr::{addr_of_mut, NonNull};
+use core::ptr::{NonNull, addr_of_mut};
 
 struct ChunkHeader {
     prev: Option<Chunk>,

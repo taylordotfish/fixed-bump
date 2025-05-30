@@ -19,7 +19,7 @@
 
 use super::chunk::Chunk;
 use super::inner::BumpInner;
-use alloc::alloc::{handle_alloc_error, Layout};
+use alloc::alloc::{Layout, handle_alloc_error};
 use core::cell::UnsafeCell;
 use core::ptr::NonNull;
 
