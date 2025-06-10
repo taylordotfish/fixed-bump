@@ -143,8 +143,6 @@ mod dynamic;
 mod generic;
 mod inner;
 mod rc;
-#[cfg(test)]
-mod tests;
 
 pub use bump::Bump;
 pub use dynamic::DynamicBump;

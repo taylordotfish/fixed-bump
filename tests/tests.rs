@@ -17,9 +17,7 @@
  * along with fixed-bump. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::Bump;
-
-mod rc;
+use fixed_bump::Bump;
 
 #[test]
 fn empty() {
