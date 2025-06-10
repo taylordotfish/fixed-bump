@@ -17,6 +17,8 @@
  * along with fixed-bump. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#![cfg_attr(feature = "allocator_api", feature(allocator_api))]
+
 use fixed_bump::Bump;
 
 #[test]
@@ -80,7 +82,6 @@ fn multiple_types() {
 #[cfg(feature = "allocator_api")]
 #[test]
 fn allocator() {
-    use alloc::vec::Vec;
     let bump = Bump::<[u32; 32]>::new();
     let mut vec1: Vec<u16, _> = Vec::with_capacity_in(32, &bump);
     for i in 0..32 {
@@ -95,8 +96,8 @@ fn allocator() {
         assert_eq!(vec2[i as usize], i.into());
     }
 
-    core::mem::drop(vec1);
-    core::mem::drop(vec2);
+    std::mem::drop(vec1);
+    std::mem::drop(vec2);
     let mut vec3: Vec<u32, _> = Vec::with_capacity_in(32, bump);
     for i in 0..32 {
         vec3.push(i);

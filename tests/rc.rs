@@ -17,6 +17,8 @@
  * along with fixed-bump. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#![cfg_attr(feature = "allocator_api", feature(allocator_api))]
+
 use fixed_bump::{Bump, Rc};
 
 #[test]
@@ -53,7 +55,6 @@ fn multiple_chunks() {
 #[cfg(feature = "allocator_api")]
 #[test]
 fn allocator() {
-    use alloc::vec::Vec;
     let bump = Rc::<Bump<[u8; 16]>>::default();
     let mut vec1: Vec<u8, _> = Vec::with_capacity_in(8, bump.clone());
     let mut vec2: Vec<u8, _> = Vec::with_capacity_in(8, bump);
